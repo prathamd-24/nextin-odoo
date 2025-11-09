@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { login, DEMO_USERS, getRoleLabel } from '@/lib/mockAuth';
+import { apiLogin, getUserDisplayName } from '@/lib/apiAuth';
+import { DEMO_USERS, getRoleLabel, login } from '@/lib/mockAuth';
 import { Layers, Lock } from 'lucide-react';
 
 export default function Login() {
@@ -15,27 +16,53 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    setTimeout(() => {
-      const user = login(email, password);
+    try {
+      // Try API login first
+      const user = await apiLogin(email, password);
       if (user) {
+        const displayName = getUserDisplayName(user);
         toast({
           title: 'Welcome back!',
-          description: `Logged in as ${user.full_name}`,
+          description: `Logged in as ${displayName}`,
         });
         navigate('/dashboard');
-      } else {
-        toast({
-          title: 'Login failed',
-          description: 'Invalid email or password',
-          variant: 'destructive',
-        });
       }
+    } catch (error) {
+      console.log('API login failed, trying demo authentication...');
+      
+      // Fallback to demo authentication if API fails
+      try {
+        const demoUser = login(email, password);
+        if (demoUser) {
+          toast({
+            title: 'Welcome back!',
+            description: `Logged in as ${demoUser.full_name} (Demo Mode)`,
+          });
+          navigate('/dashboard');
+          return;
+        }
+      } catch (demoError) {
+        console.log('Demo login also failed');
+      }
+      
+      // If both fail, show error
+      let errorMessage = 'Invalid email or password';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: 'Login failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   const handleDemoLogin = (demoEmail: string, demoPassword: string) => {

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { isAuthenticated } from '@/lib/mockAuth';
+import { isAuthenticated } from '@/lib/apiAuth';
 
 interface ProtectedRouteProps {
   children: ReactNode;

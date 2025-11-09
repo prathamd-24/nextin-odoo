@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getCurrentUser, logout, getRoleLabel } from '@/lib/mockAuth';
+import { getCurrentUser, logout, getUserDisplayName, getUserRole } from '@/lib/apiAuth';
+import { getRoleLabel } from '@/lib/mockAuth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -33,15 +34,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
   // Role-based navigation items
   const getNavItems = () => {
+    const userRole = user ? getUserRole(user) : null;
     const baseItems = [
-      { icon: LayoutDashboard, label: 'Dashboard', path: user?.role === 'admin' ? '/admin/dashboard' : '/dashboard', roles: ['admin', 'project_manager', 'team_member', 'sales_finance'] },
+      { icon: LayoutDashboard, label: 'Dashboard', path: userRole === 'admin' ? '/admin/dashboard' : '/dashboard', roles: ['admin', 'project_manager', 'team_member', 'sales_finance'] },
       { icon: Folder, label: 'Projects', path: '/projects', roles: ['admin', 'project_manager', 'team_member'] },
       { icon: CheckSquare, label: 'Tasks', path: '/tasks', roles: ['admin', 'project_manager', 'team_member'] },
       { icon: BarChart3, label: 'Analytics', path: '/analytics', roles: ['admin', 'sales_finance'] },
@@ -51,11 +53,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     ];
 
     // Filter items based on user role
-    if (user?.role === 'admin') {
+    if (userRole === 'admin') {
       return baseItems; // Admins see everything
     }
 
-    return baseItems.filter(item => item.roles.includes(user?.role || ''));
+    return baseItems.filter(item => item.roles.includes(userRole || ''));
   };
 
   const navItems = getNavItems();
@@ -94,13 +96,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <button className="w-full glass-card p-3 hover:bg-accent/10 transition-all duration-smooth flex items-center gap-3">
                 <Avatar>
                   <AvatarFallback className="bg-accent-1/20 text-accent-1">
-                    {user && getInitials(user.full_name)}
+                    {user && getInitials(getUserDisplayName(user))}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-foreground">{user?.full_name}</p>
+                  <p className="text-sm font-medium text-foreground">{user && getUserDisplayName(user)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {user && getRoleLabel(user.role)}
+                    {user && getRoleLabel(getUserRole(user))}
                   </p>
                 </div>
               </button>
@@ -108,7 +110,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <DropdownMenuContent align="end" className="glass-card border-glass-border w-56">
               <DropdownMenuLabel>
                 <div>
-                  <p className="font-medium">{user?.full_name}</p>
+                  <p className="font-medium">{user && getUserDisplayName(user)}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
               </DropdownMenuLabel>
@@ -117,7 +119,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
               </DropdownMenuItem>
-              {user?.role === 'admin' && (
+              {user && getUserRole(user) === 'admin' && (
                 <>
                   <DropdownMenuSeparator className="bg-glass-border" />
                   <DropdownMenuItem onClick={() => navigate('/admin/dashboard')}>
